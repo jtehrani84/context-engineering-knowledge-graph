@@ -476,9 +476,9 @@
     <!-- Architecture -->
     <section id="architecture" class="py-24 px-6 bg-slate-800/30">
         <div class="max-w-5xl mx-auto">
-            <h2 class="text-3xl md:text-4xl font-bold mb-4 fade-up stagger-1">Three Phases, One Afternoon</h2>
+            <h2 class="text-3xl md:text-4xl font-bold mb-4 fade-up stagger-1">Four Phases, All Shipped</h2>
             <p class="text-lg text-slate-300 leading-relaxed mb-12 fade-up stagger-2">
-                The entire system — graph construction, session integration, and auto-indexing — was built in a single session. Local SQLite. No cloud infrastructure. No API calls. Just entity extraction and traversal.
+                The entire system — graph construction, session integration, auto-indexing, and live tool enrichment — was built across two sessions. Local SQLite. No cloud infrastructure. No API calls. Just entity extraction and traversal.
             </p>
 
             <div class="space-y-6">
@@ -537,6 +537,25 @@
                         <div class="text-slate-300">3. Re-scan for entity mentions</div>
                         <div class="text-slate-300">4. Recompute RELATES_TO (IDF-filtered)</div>
                         <div class="text-slate-500 mt-2"># Performance: 61ms per file</div>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-xl p-8 fade-up stagger-4">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold">4</div>
+                        <h3 class="text-xl font-semibold">Live Tool Enrichment</h3>
+                        <span class="text-emerald-400 font-mono text-xs bg-emerald-400/10 px-2 py-0.5 rounded">COMPLETE</span>
+                    </div>
+                    <p class="text-slate-300 leading-relaxed mb-4">
+                        A second PostToolUse hook fires on every MCP tool call to the Salesforce server. It extracts entity signals from the tool input — account names, search queries, SOQL strings — queries the graph for matching entities, and surfaces related memory and wiki files alongside the tool results.
+                    </p>
+                    <div class="code-block p-4 text-sm">
+                        <div class="text-slate-500"># Triggered on every Salesforce MCP tool call</div>
+                        <div class="text-slate-300">crm_assets("Starbucks")</div>
+                        <div class="text-slate-300">&rarr; extract signals: ["starbucks"]</div>
+                        <div class="text-slate-300">&rarr; match entities &rarr; traverse edges</div>
+                        <div class="text-slate-300">&rarr; inject: 3 memory files + 2 wiki pages</div>
+                        <div class="text-slate-500 mt-2"># Performance: 55ms per tool call</div>
                     </div>
                 </div>
             </div>
@@ -635,37 +654,37 @@
     <!-- What's Next -->
     <section class="py-24 px-6 bg-slate-800/30">
         <div class="max-w-4xl mx-auto">
-            <h2 class="text-3xl md:text-4xl font-bold mb-6 fade-up stagger-1">What's Left on the Table</h2>
+            <h2 class="text-3xl md:text-4xl font-bold mb-6 fade-up stagger-1">What's Built & What's Next</h2>
             <p class="text-lg text-slate-300 leading-relaxed mb-8 fade-up stagger-2">
-                The graph currently powers session startup. Three extensions would make it conversational.
+                The graph now powers both session startup and live tool enrichment. Two extensions remain on the roadmap.
             </p>
 
             <div class="space-y-4">
-                <div class="glass-card rounded-xl p-6 fade-up stagger-2">
+                <div class="glass-card rounded-xl p-6 fade-up stagger-2 border border-emerald-500/20">
                     <div class="flex items-center gap-3 mb-2">
-                        <span class="text-violet-400 font-mono text-xs bg-violet-400/10 px-2 py-0.5 rounded">FUTURE</span>
-                        <h3 class="font-semibold">Post-First-Message Re-Query</h3>
+                        <span class="text-emerald-400 font-mono text-xs bg-emerald-400/10 px-2 py-0.5 rounded">LIVE</span>
+                        <h3 class="font-semibold">Graph-Enriched MCP Results</h3>
                     </div>
                     <p class="text-sm text-slate-400">
-                        Session-init runs before the user types, so it can't know intent. A second graph query after the first message would load topic-specific context mid-conversation. Requires Claude Code to support deferred context injection.
+                        When a CRM query returns data about an account, the graph now injects related context automatically. Query Starbucks? Claude sees prior analysis notes, relevant feedback, and wiki pages alongside the raw data. A PostToolUse hook extracts entity signals from tool input, queries the graph, and surfaces the top 5 related files in 55ms.
                     </p>
                 </div>
                 <div class="glass-card rounded-xl p-6 fade-up stagger-3">
                     <div class="flex items-center gap-3 mb-2">
                         <span class="text-violet-400 font-mono text-xs bg-violet-400/10 px-2 py-0.5 rounded">FUTURE</span>
-                        <h3 class="font-semibold">Graph-Enriched MCP Results</h3>
+                        <h3 class="font-semibold">Post-First-Message Re-Query</h3>
                     </div>
                     <p class="text-sm text-slate-400">
-                        When a CRM query returns "Starbucks owns Service Cloud," the graph could inject related memory — prior analysis notes, feedback on data sources, relevant wiki pages. Tool results would arrive with structural context, not raw data.
+                        Session-init runs before the user types, so it can't know intent. A second graph query after the first message would load topic-specific context mid-conversation. Parked until Claude Code adds a PostUserMessage hook type.
                     </p>
                 </div>
                 <div class="glass-card rounded-xl p-6 fade-up stagger-4">
                     <div class="flex items-center gap-3 mb-2">
-                        <span class="text-violet-400 font-mono text-xs bg-violet-400/10 px-2 py-0.5 rounded">FUTURE</span>
+                        <span class="text-amber-400 font-mono text-xs bg-amber-400/10 px-2 py-0.5 rounded">PARKED</span>
                         <h3 class="font-semibold">Task-Specific Rule Loading</h3>
                     </div>
                     <p class="text-sm text-slate-400">
-                        Instead of loading all 11 rules files every session, the graph could identify which rules apply to the current task. Working on slides? Skip the Apex security rules. Working on deployment? Skip the UI design rules. Estimated 40% context savings.
+                        Instead of loading all 11 rules files every session, the graph could identify which rules apply to the current task. Hit a platform constraint: Claude Code auto-loads all rules before any hook runs. Revisiting if the platform adds conditional rule loading.
                     </p>
                 </div>
             </div>
