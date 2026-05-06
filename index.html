@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teaching Claude to Think in Graphs | Context Engineering Part 4</title>
+    <meta name="description" content="Part 4 of the Context Engineering series. How a local knowledge graph replaces manual context routing with entity-based traversal — turning 200+ files into a connected, queryable structure.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        .fade-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+        }
+        .fade-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .stagger-1 { transition-delay: 0.1s; }
+        .stagger-2 { transition-delay: 0.2s; }
+        .stagger-3 { transition-delay: 0.3s; }
+        .stagger-4 { transition-delay: 0.4s; }
+        .stagger-5 { transition-delay: 0.5s; }
+        .stagger-6 { transition-delay: 0.6s; }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 50%, #34d399 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .code-block {
+            background: #0B1120;
+            border: 1px solid rgba(96, 165, 250, 0.15);
+            border-radius: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            overflow-x: auto;
+        }
+
+        .node-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .edge-line {
+            height: 2px;
+            background: linear-gradient(90deg, rgba(96,165,250,0.3), rgba(52,211,153,0.3));
+        }
+
+        .graph-node {
+            transition: all 0.3s ease;
+        }
+        .graph-node:hover {
+            transform: translateY(-4px);
+            border-color: rgba(167, 139, 250, 0.5);
+            box-shadow: 0 8px 30px rgba(167, 139, 250, 0.15);
+        }
+
+        .scenario-card {
+            transition: all 0.3s ease;
+        }
+        .scenario-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        .pulse-ring {
+            animation: pulseRing 3s ease-in-out infinite;
+        }
+        @keyframes pulseRing {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.3); }
+            50% { box-shadow: 0 0 0 12px rgba(167, 139, 250, 0); }
+        }
+
+        .hero-gradient {
+            background: linear-gradient(180deg, #0f172a 0%, #1a1040 50%, #0f172a 100%);
+        }
+
+        .counter { font-variant-numeric: tabular-nums; }
+
+        .graph-viz {
+            position: relative;
+            height: 360px;
+        }
+        .graph-viz .gv-node {
+            position: absolute;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            white-space: nowrap;
+            z-index: 2;
+        }
+        .graph-viz svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .graph-viz svg line {
+            stroke: rgba(148,163,184,0.15);
+            stroke-width: 1.5;
+        }
+        .graph-viz svg line.highlight {
+            stroke: rgba(167,139,250,0.4);
+            stroke-width: 2;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-700/50">
+        <div class="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
+            <span class="text-sm font-medium text-slate-400">Context Engineering <span class="text-violet-400">Part 4</span></span>
+            <div class="flex gap-6 text-sm">
+                <a href="#problem" class="text-slate-400 hover:text-white transition-colors">Problem</a>
+                <a href="#graph" class="text-slate-400 hover:text-white transition-colors">Graph</a>
+                <a href="#validation" class="text-slate-400 hover:text-white transition-colors">Validation</a>
+                <a href="#architecture" class="text-slate-400 hover:text-white transition-colors">Architecture</a>
+                <a href="#series" class="text-slate-400 hover:text-white transition-colors">Series</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-gradient min-h-[85vh] flex items-center relative overflow-hidden">
+        <div class="max-w-6xl mx-auto px-6 w-full py-32">
+            <p class="text-violet-400 font-mono text-sm mb-4 fade-up">CONTEXT ENGINEERING SERIES &mdash; PART 4 OF 5</p>
+            <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-8 fade-up stagger-1">
+                Teaching Claude to<br>
+                <span class="gradient-text">Think in Graphs</span>
+            </h1>
+            <p class="text-xl md:text-2xl text-slate-300 max-w-3xl mb-12 leading-relaxed fade-up stagger-2">
+                Part 1 gave Claude memory. Now 200+ files later, I needed it to stop loading everything and start loading the right things. A local knowledge graph replaced manual curation with entity-based traversal.
+            </p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 fade-up stagger-3">
+                <div class="glass-card rounded-xl p-5 text-center">
+                    <div class="text-3xl font-bold text-violet-400 counter" data-target="377">0</div>
+                    <div class="text-sm text-slate-400 mt-1">Graph Nodes</div>
+                </div>
+                <div class="glass-card rounded-xl p-5 text-center">
+                    <div class="text-3xl font-bold text-blue-400 counter" data-target="5102">0</div>
+                    <div class="text-sm text-slate-400 mt-1">Edges</div>
+                </div>
+                <div class="glass-card rounded-xl p-5 text-center">
+                    <div class="text-3xl font-bold text-emerald-400 counter" data-target="68">0</div>
+                    <div class="text-sm text-slate-400 mt-1">Entity Seeds</div>
+                </div>
+                <div class="glass-card rounded-xl p-5 text-center">
+                    <div class="text-3xl font-bold text-amber-400">151<span class="text-lg">ms</span></div>
+                    <div class="text-sm text-slate-400 mt-1">Query Time</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- The Problem -->
+    <section id="problem" class="py-24 px-6">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6 fade-up stagger-1">The Memory System Hit a Wall</h2>
+            <p class="text-lg text-slate-300 leading-relaxed mb-8 fade-up stagger-2">
+                The 5-layer architecture from Part 1 worked. Claude remembered across sessions, loaded wiki pages on demand, and applied rules consistently. But after 6 months of daily use, the system had a scaling problem.
+            </p>
+
+            <div class="grid md:grid-cols-3 gap-6 mb-12">
+                <div class="glass-card rounded-xl p-6 fade-up stagger-2">
+                    <div class="text-4xl font-bold text-red-400 mb-2">128+</div>
+                    <div class="text-slate-300 font-medium mb-2">Memory Files</div>
+                    <p class="text-sm text-slate-400">The flat MEMORY.md index hit 222 lines. The budget is 200. Every new memory pushed an old one off the edge.</p>
+                </div>
+                <div class="glass-card rounded-xl p-6 fade-up stagger-3">
+                    <div class="text-4xl font-bold text-red-400 mb-2">63</div>
+                    <div class="text-slate-300 font-medium mb-2">Wiki Pages</div>
+                    <p class="text-sm text-slate-400">Every new wiki page required a manual routing table update in CLAUDE.md. Miss it, and Claude never finds the page.</p>
+                </div>
+                <div class="glass-card rounded-xl p-6 fade-up stagger-4">
+                    <div class="text-4xl font-bold text-red-400 mb-2">3</div>
+                    <div class="text-slate-300 font-medium mb-2">Files Surfaced</div>
+                    <p class="text-sm text-slate-400">Session startup showed the 3 most recently modified files. Recent doesn't mean relevant. Working on slides? Here's yesterday's deployment fix.</p>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-xl p-8 fade-up stagger-3">
+                <h3 class="text-xl font-semibold mb-4 text-slate-200">The Core Issue</h3>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    Every layer of the system had its own relevance mechanism. Memory used modification time. Wiki used a hand-maintained routing table. Rules loaded everything regardless. They were stacked but not <em>connected</em>.
+                </p>
+                <p class="text-slate-300 leading-relaxed">
+                    The question "what should Claude load for this task?" was answered by three independent systems that didn't talk to each other. The answer was always incomplete.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- The Graph -->
+    <section id="graph" class="py-24 px-6 bg-slate-800/30">
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4 fade-up stagger-1">Files Become Nodes. Concepts Become Edges.</h2>
+            <p class="text-lg text-slate-300 leading-relaxed mb-12 fade-up stagger-2">
+                A knowledge graph connects the three systems into one traversable structure. Instead of "show me recent files," the session asks "what entities are relevant to this work, and which files discuss them?"
+            </p>
+
+            <!-- Node Types -->
+            <div class="grid md:grid-cols-3 gap-4 mb-12">
+                <div class="glass-card rounded-xl p-6 fade-up stagger-1">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="node-dot bg-violet-400"></div>
+                        <h3 class="font-semibold text-lg">File Nodes</h3>
+                    </div>
+                    <div class="space-y-2 text-sm text-slate-400">
+                        <div class="flex justify-between"><span>Memory files</span><span class="text-violet-300 font-mono">~130</span></div>
+                        <div class="flex justify-between"><span>Wiki pages</span><span class="text-violet-300 font-mono">~65</span></div>
+                        <div class="flex justify-between"><span>Rules files</span><span class="text-violet-300 font-mono">~11</span></div>
+                    </div>
+                </div>
+                <div class="glass-card rounded-xl p-6 fade-up stagger-2">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="node-dot bg-blue-400"></div>
+                        <h3 class="font-semibold text-lg">Entity Nodes</h3>
+                    </div>
+                    <div class="space-y-2 text-sm text-slate-400">
+                        <div class="flex justify-between"><span>Accounts</span><span class="text-blue-300 font-mono">12</span></div>
+                        <div class="flex justify-between"><span>Products</span><span class="text-blue-300 font-mono">13</span></div>
+                        <div class="flex justify-between"><span>Systems</span><span class="text-blue-300 font-mono">10</span></div>
+                    </div>
+                </div>
+                <div class="glass-card rounded-xl p-6 fade-up stagger-3">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="node-dot bg-emerald-400"></div>
+                        <h3 class="font-semibold text-lg">Concept Nodes</h3>
+                    </div>
+                    <div class="space-y-2 text-sm text-slate-400">
+                        <div class="flex justify-between"><span>Concepts</span><span class="text-emerald-300 font-mono">25</span></div>
+                        <div class="flex justify-between"><span>Projects</span><span class="text-emerald-300 font-mono">9</span></div>
+                        <div class="flex justify-between"><span class="font-medium text-slate-300">Total nodes</span><span class="text-white font-mono font-medium">377</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edge Types -->
+            <h3 class="text-2xl font-bold mb-6 fade-up">Five Edge Types Connect Everything</h3>
+            <div class="space-y-4 mb-12">
+                <div class="glass-card rounded-xl p-5 flex items-start gap-4 fade-up stagger-1">
+                    <code class="text-violet-400 font-mono text-sm bg-violet-400/10 px-3 py-1 rounded-lg whitespace-nowrap">REFERENCES</code>
+                    <div>
+                        <p class="text-slate-300">A file mentions an entity. <span class="text-slate-500">pitch-craft.md &rarr; REFERENCES &rarr; "slide generation"</span></p>
+                    </div>
+                </div>
+                <div class="glass-card rounded-xl p-5 flex items-start gap-4 fade-up stagger-2">
+                    <code class="text-blue-400 font-mono text-sm bg-blue-400/10 px-3 py-1 rounded-lg whitespace-nowrap">APPLIES_TO</code>
+                    <div>
+                        <p class="text-slate-300">A wiki page serves a work context. <span class="text-slate-500">security-governance.md &rarr; APPLIES_TO &rarr; "Apex development"</span></p>
+                    </div>
+                </div>
+                <div class="glass-card rounded-xl p-5 flex items-start gap-4 fade-up stagger-3">
+                    <code class="text-emerald-400 font-mono text-sm bg-emerald-400/10 px-3 py-1 rounded-lg whitespace-nowrap">RELATES_TO</code>
+                    <div>
+                        <p class="text-slate-300">Two files share 3+ entities (IDF-filtered). <span class="text-slate-500">pitch-craft.md &rarr; RELATES_TO &rarr; slide-visual-design.md</span></p>
+                    </div>
+                </div>
+                <div class="glass-card rounded-xl p-5 flex items-start gap-4 fade-up stagger-4">
+                    <code class="text-amber-400 font-mono text-sm bg-amber-400/10 px-3 py-1 rounded-lg whitespace-nowrap">DISCUSSED_IN</code>
+                    <div>
+                        <p class="text-slate-300">An entity appears in a memory file. <span class="text-slate-500">"Agentforce" &rarr; DISCUSSED_IN &rarr; agent-harness-project.md</span></p>
+                    </div>
+                </div>
+                <div class="glass-card rounded-xl p-5 flex items-start gap-4 fade-up stagger-5">
+                    <code class="text-pink-400 font-mono text-sm bg-pink-400/10 px-3 py-1 rounded-lg whitespace-nowrap">PART_OF</code>
+                    <div>
+                        <p class="text-slate-300">An entity belongs to a project. <span class="text-slate-500">"AIP" &rarr; PART_OF &rarr; "Meridian Platform"</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- How it works -->
+            <h3 class="text-2xl font-bold mb-6 fade-up">How Context Assembly Works Now</h3>
+            <div class="glass-card rounded-xl overflow-hidden fade-up stagger-2">
+                <div class="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-700/50">
+                    <div class="p-8">
+                        <div class="text-red-400 font-mono text-xs mb-3 uppercase tracking-wider">Before: Manual Routing</div>
+                        <div class="code-block p-4 text-sm mb-4">
+                            <div class="text-slate-500"># Session starts</div>
+                            <div class="text-slate-300">1. Load ALL 11 rules files</div>
+                            <div class="text-slate-300">2. Check routing table in CLAUDE.md</div>
+                            <div class="text-slate-300">3. Show 3 most recent files by mtime</div>
+                            <div class="text-red-400 mt-2"># Result: generic context</div>
+                            <div class="text-red-400"># 30% irrelevant per session</div>
+                        </div>
+                    </div>
+                    <div class="p-8">
+                        <div class="text-emerald-400 font-mono text-xs mb-3 uppercase tracking-wider">After: Graph Traversal</div>
+                        <div class="code-block p-4 text-sm mb-4">
+                            <div class="text-slate-500"># Session starts</div>
+                            <div class="text-slate-300">1. Extract signals from git state</div>
+                            <div class="text-slate-300">2. Match signals to entity nodes</div>
+                            <div class="text-slate-300">3. Traverse APPLIES_TO (3x) + REFERENCES</div>
+                            <div class="text-slate-300">4. Rank files by traversal score</div>
+                            <div class="text-emerald-400 mt-2"># Result: entity-relevant context</div>
+                            <div class="text-emerald-400"># 151ms total query time</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Validation -->
+    <section id="validation" class="py-24 px-6">
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4 fade-up stagger-1">5 for 5</h2>
+            <p class="text-lg text-slate-300 leading-relaxed mb-4 fade-up stagger-2">
+                The gate was simple: test 5 real scenarios. If graph-based context beats the old mtime-based approach in 3 out of 5, proceed. It won all five.
+            </p>
+            <p class="text-slate-400 mb-12 fade-up stagger-2">Each scenario compares what the old system would surface vs. what the graph surfaces for the same session start.</p>
+
+            <div class="space-y-6">
+                <!-- Scenario 1 -->
+                <div class="scenario-card glass-card rounded-xl p-6 fade-up stagger-1">
+                    <div class="flex items-start justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-slate-200">Scenario 1: Working on AIP slide generation</h3>
+                        <span class="text-emerald-400 font-mono text-sm bg-emerald-400/10 px-3 py-1 rounded-lg">Graph Wins</span>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="text-red-400 text-xs font-mono mb-2 uppercase tracking-wider">Mtime (old)</div>
+                            <ul class="text-sm text-slate-400 space-y-1">
+                                <li>Whatever 3 files were edited most recently</li>
+                                <li>Usually: deployment notes, unrelated session log, NNAOV metrics</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="text-emerald-400 text-xs font-mono mb-2 uppercase tracking-wider">Graph (new)</div>
+                            <ul class="text-sm text-slate-300 space-y-1">
+                                <li>pitch-craft.md, slide-visual-design.md</li>
+                                <li>golden-narrative-framework.md, design-token-system.md</li>
+                                <li>feedback-imagen-cheesy.md, feedback-slide-design-gaps.md</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 2 -->
+                <div class="scenario-card glass-card rounded-xl p-6 fade-up stagger-2">
+                    <div class="flex items-start justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-slate-200">Scenario 2: Preparing a customer analysis for Starbucks</h3>
+                        <span class="text-emerald-400 font-mono text-sm bg-emerald-400/10 px-3 py-1 rounded-lg">Graph Wins</span>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="text-red-400 text-xs font-mono mb-2 uppercase tracking-wider">Mtime (old)</div>
+                            <ul class="text-sm text-slate-400 space-y-1">
+                                <li>No Starbucks awareness at all</li>
+                                <li>Just the 3 most recently touched files</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="text-emerald-400 text-xs font-mono mb-2 uppercase tracking-wider">Graph (new)</div>
+                            <ul class="text-sm text-slate-300 space-y-1">
+                                <li>sharktank-account-blitz.md (references Starbucks)</li>
+                                <li>corporate-grounding-system.md (applies to analysis)</li>
+                                <li>feedback-verify-sources-before-building.md</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 3 -->
+                <div class="scenario-card glass-card rounded-xl p-6 fade-up stagger-3">
+                    <div class="flex items-start justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-slate-200">Scenario 3: Debugging an Apex deployment issue</h3>
+                        <span class="text-emerald-400 font-mono text-sm bg-emerald-400/10 px-3 py-1 rounded-lg">Graph Wins</span>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="text-red-400 text-xs font-mono mb-2 uppercase tracking-wider">Mtime (old)</div>
+                            <ul class="text-sm text-slate-400 space-y-1">
+                                <li>Random recent files, none Apex-related</li>
+                                <li>No development rules surfaced</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="text-emerald-400 text-xs font-mono mb-2 uppercase tracking-wider">Graph (new)</div>
+                            <ul class="text-sm text-slate-300 space-y-1">
+                                <li>salesforce-development-rules.md (APPLIES_TO Apex)</li>
+                                <li>agentforce-design-patterns.md</li>
+                                <li>feedback-apex-metadata-deploy-workaround.md</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 4 -->
+                <div class="scenario-card glass-card rounded-xl p-6 fade-up stagger-4">
+                    <div class="flex items-start justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-slate-200">Scenario 4: Writing a customer email about Agent Harness</h3>
+                        <span class="text-emerald-400 font-mono text-sm bg-emerald-400/10 px-3 py-1 rounded-lg">Graph Wins</span>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="text-red-400 text-xs font-mono mb-2 uppercase tracking-wider">Mtime (old)</div>
+                            <ul class="text-sm text-slate-400 space-y-1">
+                                <li>No harness context unless recently edited</li>
+                                <li>Communication rules not surfaced</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="text-emerald-400 text-xs font-mono mb-2 uppercase tracking-wider">Graph (new)</div>
+                            <ul class="text-sm text-slate-300 space-y-1">
+                                <li>agent-harness-architecture.md, hybrid-reasoning-vs-harness.md</li>
+                                <li>headless-360-architecture.md</li>
+                                <li>communication-system.md, anti-slop.md</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 5 -->
+                <div class="scenario-card glass-card rounded-xl p-6 fade-up stagger-5">
+                    <div class="flex items-start justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-slate-200">Scenario 5: Deploying a Cloud Run update</h3>
+                        <span class="text-emerald-400 font-mono text-sm bg-emerald-400/10 px-3 py-1 rounded-lg">Graph Wins</span>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="text-red-400 text-xs font-mono mb-2 uppercase tracking-wider">Mtime (old)</div>
+                            <ul class="text-sm text-slate-400 space-y-1">
+                                <li>No deployment or security context</li>
+                                <li>TVM compliance rules not surfaced</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="text-emerald-400 text-xs font-mono mb-2 uppercase tracking-wider">Graph (new)</div>
+                            <ul class="text-sm text-slate-300 space-y-1">
+                                <li>gcp-deployment-patterns.md, gcp-security-compliance.md</li>
+                                <li>integration-topology.md, security-architecture.md</li>
+                                <li>sa-key-rotation.md (SA key expires 2026-06-27)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture -->
+    <section id="architecture" class="py-24 px-6 bg-slate-800/30">
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4 fade-up stagger-1">Three Phases, One Afternoon</h2>
+            <p class="text-lg text-slate-300 leading-relaxed mb-12 fade-up stagger-2">
+                The entire system — graph construction, session integration, and auto-indexing — was built in a single session. Local SQLite. No cloud infrastructure. No API calls. Just entity extraction and traversal.
+            </p>
+
+            <div class="space-y-6">
+                <div class="glass-card rounded-xl p-8 fade-up stagger-1">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-violet-500/20 flex items-center justify-center text-violet-400 font-bold">1</div>
+                        <h3 class="text-xl font-semibold">Graph Bootstrap</h3>
+                        <span class="text-emerald-400 font-mono text-xs bg-emerald-400/10 px-2 py-0.5 rounded">COMPLETE</span>
+                    </div>
+                    <p class="text-slate-300 leading-relaxed mb-4">
+                        Entity-extract every memory, wiki, and rules file. Seed 68 entities across 6 types (accounts, products, projects, systems, concepts). Parse the CLAUDE.md routing table into APPLIES_TO edges. Scan all files for entity mentions. Compute RELATES_TO relationships between files sharing 3+ non-stop-word entities.
+                    </p>
+                    <div class="code-block p-4 text-sm">
+                        <div class="text-slate-500"># Build the graph</div>
+                        <div><span class="text-emerald-400">$</span> <span class="text-slate-300">bun run build-context-graph.ts</span></div>
+                        <div class="text-slate-500 mt-2"># Output: graph.sqlite</div>
+                        <div class="text-slate-400"># 377 nodes, 5,102 edges</div>
+                        <div class="text-slate-400"># Rebuilt from scratch in ~2 seconds</div>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-xl p-8 fade-up stagger-2">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold">2</div>
+                        <h3 class="text-xl font-semibold">Session-Init Integration</h3>
+                        <span class="text-emerald-400 font-mono text-xs bg-emerald-400/10 px-2 py-0.5 rounded">COMPLETE</span>
+                    </div>
+                    <p class="text-slate-300 leading-relaxed mb-4">
+                        The SessionStart hook queries the graph instead of the hardcoded routing table. It extracts signals from git state (changed files, recent commits, branch name), matches them to entity nodes, and traverses APPLIES_TO (weighted 3x) and REFERENCES edges to find the most relevant wiki and memory files.
+                    </p>
+                    <div class="code-block p-4 text-sm">
+                        <div class="text-slate-500"># Signal gathering (automatic on every session start)</div>
+                        <div class="text-slate-300">git diff &rarr; file paths &rarr; entity matches</div>
+                        <div class="text-slate-300">git log &rarr; commit words &rarr; entity matches</div>
+                        <div class="text-slate-300">cwd &rarr; directory names &rarr; entity matches</div>
+                        <div class="text-slate-500 mt-2"># Traversal</div>
+                        <div class="text-slate-300">matched entities &rarr; APPLIES_TO (3x) + REFERENCES (1x)</div>
+                        <div class="text-slate-300">&rarr; ranked wiki pages + memory files</div>
+                        <div class="text-slate-500 mt-2"># Fallback: if graph.sqlite missing, use old routing</div>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-xl p-8 fade-up stagger-3">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">3</div>
+                        <h3 class="text-xl font-semibold">Auto-Indexing</h3>
+                        <span class="text-emerald-400 font-mono text-xs bg-emerald-400/10 px-2 py-0.5 rounded">COMPLETE</span>
+                    </div>
+                    <p class="text-slate-300 leading-relaxed mb-4">
+                        A PostToolUse hook fires on every Write or Edit to a memory, wiki, or rules file. It incrementally updates that file's node and re-scans for entity mentions — no full rebuild needed. The graph stays current as files change, files are created, or files are deleted.
+                    </p>
+                    <div class="code-block p-4 text-sm">
+                        <div class="text-slate-500"># Triggered automatically on every file write</div>
+                        <div class="text-slate-300">1. Upsert file node</div>
+                        <div class="text-slate-300">2. Delete old REFERENCES edges</div>
+                        <div class="text-slate-300">3. Re-scan for entity mentions</div>
+                        <div class="text-slate-300">4. Recompute RELATES_TO (IDF-filtered)</div>
+                        <div class="text-slate-500 mt-2"># Performance: 61ms per file</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quality Engineering -->
+            <h3 class="text-2xl font-bold mt-16 mb-6 fade-up">Two Quality Problems, Two Fixes</h3>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="glass-card rounded-xl p-6 fade-up stagger-1">
+                    <h4 class="font-semibold text-amber-400 mb-3">False Positive: "Exa" Matched "Example"</h4>
+                    <p class="text-sm text-slate-400 mb-3">
+                        The entity "Exa" (a search API) was matching "example", "exactly", "examination" — appearing in 91 out of 308 files. 30% of the corpus.
+                    </p>
+                    <div class="text-sm">
+                        <span class="text-red-400 font-mono">Before:</span> <span class="text-slate-400">substring match</span><br>
+                        <span class="text-emerald-400 font-mono">Fix:</span> <span class="text-slate-300">word-boundary regex for terms under 5 characters</span><br>
+                        <span class="text-slate-400">91 &rarr; 19 references</span>
+                    </div>
+                </div>
+                <div class="glass-card rounded-xl p-6 fade-up stagger-2">
+                    <h4 class="font-semibold text-amber-400 mb-3">Edge Explosion: 16,274 RELATES_TO</h4>
+                    <p class="text-sm text-slate-400 mb-3">
+                        High-frequency entities (AIP in 44%, Agentforce in 42%, Slack in 35%) caused nearly every file to relate to every other file. The graph was fully connected — useless for ranking.
+                    </p>
+                    <div class="text-sm">
+                        <span class="text-red-400 font-mono">Before:</span> <span class="text-slate-400">16,274 edges, 2+ shared entities</span><br>
+                        <span class="text-emerald-400 font-mono">Fix:</span> <span class="text-slate-300">IDF stop-word filter (>25%) + raise threshold to 3</span><br>
+                        <span class="text-slate-400">16,274 &rarr; 2,877 edges (82% reduction)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technical Details -->
+    <section class="py-24 px-6">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6 fade-up stagger-1">Under the Hood</h2>
+            <p class="text-lg text-slate-300 leading-relaxed mb-12 fade-up stagger-2">
+                The entire system is local. No cloud database, no API calls, no network. SQLite running on your laptop with a TypeScript build script and Python hooks.
+            </p>
+
+            <div class="glass-card rounded-xl p-8 fade-up stagger-2">
+                <h3 class="text-lg font-semibold mb-4">Stack</h3>
+                <div class="grid md:grid-cols-2 gap-x-12 gap-y-3 text-sm">
+                    <div class="flex justify-between border-b border-slate-700/50 pb-2">
+                        <span class="text-slate-400">Database</span>
+                        <span class="text-slate-200 font-mono">SQLite (bun:sqlite)</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-700/50 pb-2">
+                        <span class="text-slate-400">Build script</span>
+                        <span class="text-slate-200 font-mono">TypeScript (Bun)</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-700/50 pb-2">
+                        <span class="text-slate-400">Hooks</span>
+                        <span class="text-slate-200 font-mono">Python 3 (stdlib only)</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-700/50 pb-2">
+                        <span class="text-slate-400">Full rebuild</span>
+                        <span class="text-slate-200 font-mono">~2 seconds</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-700/50 pb-2">
+                        <span class="text-slate-400">Session query</span>
+                        <span class="text-slate-200 font-mono">151ms</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-700/50 pb-2">
+                        <span class="text-slate-400">Incremental update</span>
+                        <span class="text-slate-200 font-mono">61ms per file</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-700/50 pb-2">
+                        <span class="text-slate-400">Dependencies</span>
+                        <span class="text-slate-200 font-mono">Zero (stdlib only)</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-700/50 pb-2">
+                        <span class="text-slate-400">External services</span>
+                        <span class="text-slate-200 font-mono">None</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-xl p-8 mt-6 fade-up stagger-3">
+                <h3 class="text-lg font-semibold mb-4">Schema (complete)</h3>
+                <div class="code-block p-4 text-sm">
+                    <div class="text-blue-400">CREATE TABLE</div>
+                    <div class="text-slate-300 pl-4">nodes (id, node_type, name, canonical_name, file_path, properties, created_at, updated_at)</div>
+                    <div class="text-slate-500 pl-4">-- UNIQUE(node_type, canonical_name)</div>
+                    <div class="text-blue-400 mt-3">CREATE TABLE</div>
+                    <div class="text-slate-300 pl-4">edges (id, source_id, target_id, edge_type, confidence, properties, created_at)</div>
+                    <div class="text-slate-500 pl-4">-- UNIQUE(source_id, target_id, edge_type)</div>
+                    <div class="text-slate-500 pl-4">-- FK with ON DELETE CASCADE</div>
+                    <div class="text-emerald-400 mt-3 text-xs">Two tables. Five indexes. That's the whole thing.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- What's Next -->
+    <section class="py-24 px-6 bg-slate-800/30">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6 fade-up stagger-1">What's Left on the Table</h2>
+            <p class="text-lg text-slate-300 leading-relaxed mb-8 fade-up stagger-2">
+                The graph currently powers session startup. Three extensions would make it conversational.
+            </p>
+
+            <div class="space-y-4">
+                <div class="glass-card rounded-xl p-6 fade-up stagger-2">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-violet-400 font-mono text-xs bg-violet-400/10 px-2 py-0.5 rounded">FUTURE</span>
+                        <h3 class="font-semibold">Post-First-Message Re-Query</h3>
+                    </div>
+                    <p class="text-sm text-slate-400">
+                        Session-init runs before the user types, so it can't know intent. A second graph query after the first message would load topic-specific context mid-conversation. Requires Claude Code to support deferred context injection.
+                    </p>
+                </div>
+                <div class="glass-card rounded-xl p-6 fade-up stagger-3">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-violet-400 font-mono text-xs bg-violet-400/10 px-2 py-0.5 rounded">FUTURE</span>
+                        <h3 class="font-semibold">Graph-Enriched MCP Results</h3>
+                    </div>
+                    <p class="text-sm text-slate-400">
+                        When a CRM query returns "Starbucks owns Service Cloud," the graph could inject related memory — prior analysis notes, feedback on data sources, relevant wiki pages. Tool results would arrive with structural context, not raw data.
+                    </p>
+                </div>
+                <div class="glass-card rounded-xl p-6 fade-up stagger-4">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-violet-400 font-mono text-xs bg-violet-400/10 px-2 py-0.5 rounded">FUTURE</span>
+                        <h3 class="font-semibold">Task-Specific Rule Loading</h3>
+                    </div>
+                    <p class="text-sm text-slate-400">
+                        Instead of loading all 11 rules files every session, the graph could identify which rules apply to the current task. Working on slides? Skip the Apex security rules. Working on deployment? Skip the UI design rules. Estimated 40% context savings.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Series Navigation -->
+    <section id="series" class="py-24 px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4 fade-up stagger-1">The Context Engineering Series</h2>
+            <p class="text-lg text-slate-400 mb-12 fade-up stagger-2">Five parts, each building on the last. Start anywhere, but Part 1 is the foundation.</p>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <a href="https://jtehrani84.github.io/claude-context-architecture/" class="glass-card rounded-xl p-6 text-left hover:border-blue-400/30 transition-all duration-300 group fade-up stagger-1">
+                    <div class="text-blue-400 font-mono text-xs mb-2">PART 1</div>
+                    <h3 class="text-lg font-semibold mb-1 group-hover:text-blue-300 transition-colors">Teaching Claude to Remember</h3>
+                    <p class="text-sm text-slate-400">5-layer architecture: CLAUDE.md, wiki, memory, hooks, rules. The foundation.</p>
+                </a>
+                <a href="https://jtehrani84.github.io/context-engineering-agentscript/" class="glass-card rounded-xl p-6 text-left hover:border-blue-400/30 transition-all duration-300 group fade-up stagger-2">
+                    <div class="text-blue-400 font-mono text-xs mb-2">PART 2</div>
+                    <h3 class="text-lg font-semibold mb-1 group-hover:text-blue-300 transition-colors">From Wrong to Expert</h3>
+                    <p class="text-sm text-slate-400">What happens without context. Agent Script case study — confident and wrong.</p>
+                </a>
+                <a href="https://jtehrani84.github.io/context-engineering-mcp/" class="glass-card rounded-xl p-6 text-left hover:border-blue-400/30 transition-all duration-300 group fade-up stagger-3">
+                    <div class="text-blue-400 font-mono text-xs mb-2">PART 3</div>
+                    <h3 class="text-lg font-semibold mb-1 group-hover:text-blue-300 transition-colors">Teaching Claude to Connect</h3>
+                    <p class="text-sm text-slate-400">MCP servers: 9 servers, 120+ tools. Org62 case study.</p>
+                </a>
+                <div class="glass-card rounded-xl p-6 text-left border-violet-400/30 pulse-ring fade-up stagger-4">
+                    <div class="text-violet-400 font-mono text-xs mb-2">PART 4 &mdash; YOU ARE HERE</div>
+                    <h3 class="text-lg font-semibold mb-1 text-violet-300">Teaching Claude to Think in Graphs</h3>
+                    <p class="text-sm text-slate-400">Knowledge graph: 377 nodes, 5,102 edges. Entity-based context assembly.</p>
+                </div>
+            </div>
+
+            <p class="text-slate-500 text-sm mt-8 fade-up stagger-5">Part 5 coming soon: Teaching Claude to Build (Skills &amp; Salesforce development automation)</p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 px-6 border-t border-slate-800">
+        <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-sm text-slate-500">
+                John Tehrani &middot; Principal, Strategic SE &middot; Salesforce
+            </div>
+            <div class="text-sm text-slate-600">
+                Built with Claude Code. Obviously.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Intersection Observer for fade-up animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+        document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+        // Counter animation
+        function animateCounters() {
+            document.querySelectorAll('.counter').forEach(counter => {
+                const target = parseInt(counter.getAttribute('data-target'));
+                if (!target) return;
+                const duration = 2000;
+                const start = performance.now();
+
+                function update(now) {
+                    const elapsed = now - start;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    counter.textContent = Math.floor(target * eased).toLocaleString();
+                    if (progress < 1) requestAnimationFrame(update);
+                }
+                requestAnimationFrame(update);
+            });
+        }
+
+        // Trigger counters when hero is visible
+        const heroObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                animateCounters();
+                heroObserver.disconnect();
+            }
+        }, { threshold: 0.3 });
+        heroObserver.observe(document.querySelector('.hero-gradient'));
+    </script>
+</body>
+</html>
