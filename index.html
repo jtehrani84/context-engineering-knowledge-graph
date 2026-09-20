@@ -162,7 +162,7 @@
                 <span class="gradient-text">Think in Graphs</span>
             </h1>
             <p class="text-xl md:text-2xl text-slate-300 max-w-3xl mb-12 leading-relaxed fade-up stagger-2">
-                Part 1 gave Claude memory. Now 200+ files later, I needed it to stop loading everything and start loading the right things. A local knowledge graph replaced manual curation with entity-based traversal.
+                Part 1 gave Claude memory, but 200+ files later that memory had started to drown it — every session loaded everything, whether it mattered or not. What I actually wanted was for it to load the right things, so a local knowledge graph took over the job manual curation used to do and started routing context by the entities a task actually touches.
             </p>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6 fade-up stagger-3">
                 <div class="glass-card rounded-xl p-5 text-center">
@@ -190,34 +190,34 @@
         <div class="max-w-4xl mx-auto">
             <h2 class="text-3xl md:text-4xl font-bold mb-6 fade-up stagger-1">The Memory System Hit a Wall</h2>
             <p class="text-lg text-slate-300 leading-relaxed mb-8 fade-up stagger-2">
-                The 5-layer architecture from Part 1 worked. Claude remembered across sessions, loaded wiki pages on demand, and applied rules consistently. But after 6 months of daily use, the system had a scaling problem.
+                The 5-layer architecture from Part 1 worked — Claude remembered across sessions, loaded wiki pages on demand, and applied rules consistently. But after 6 months of daily use, it ran into a scaling problem the original design was never built to handle.
             </p>
 
             <div class="grid md:grid-cols-3 gap-6 mb-12">
                 <div class="glass-card rounded-xl p-6 fade-up stagger-2">
                     <div class="text-4xl font-bold text-red-400 mb-2">217</div>
                     <div class="text-slate-300 font-medium mb-2">Memory Files</div>
-                    <p class="text-sm text-slate-400">The flat MEMORY.md index hit 222 lines. The budget is 200. Every new memory pushed an old one off the edge.</p>
+                    <p class="text-sm text-slate-400">The flat MEMORY.md index had swollen to 222 lines against a 200-line budget, so every new memory quietly pushed an older one off the bottom.</p>
                 </div>
                 <div class="glass-card rounded-xl p-6 fade-up stagger-3">
                     <div class="text-4xl font-bold text-red-400 mb-2">86</div>
                     <div class="text-slate-300 font-medium mb-2">Wiki Pages</div>
-                    <p class="text-sm text-slate-400">Every new wiki page required a manual routing table update in CLAUDE.md. Miss it, and Claude never finds the page.</p>
+                    <p class="text-sm text-slate-400">Every new wiki page meant a manual routing-table edit in CLAUDE.md, and if you forgot it, Claude simply never found the page.</p>
                 </div>
                 <div class="glass-card rounded-xl p-6 fade-up stagger-4">
                     <div class="text-4xl font-bold text-red-400 mb-2">3</div>
                     <div class="text-slate-300 font-medium mb-2">Files Surfaced</div>
-                    <p class="text-sm text-slate-400">Session startup showed the 3 most recently modified files. Recent doesn't mean relevant. Working on slides? Here's yesterday's deployment fix.</p>
+                    <p class="text-sm text-slate-400">Session startup surfaced the 3 most recently modified files, but recent and relevant aren't the same thing — you could be deep in a slide deck and still get handed yesterday's deployment fix.</p>
                 </div>
             </div>
 
             <div class="glass-card rounded-xl p-8 fade-up stagger-3">
                 <h3 class="text-xl font-semibold mb-4 text-slate-200">The Core Issue</h3>
                 <p class="text-slate-300 leading-relaxed mb-4">
-                    Every layer of the system had its own relevance mechanism. Memory used modification time. Wiki used a hand-maintained routing table. Rules loaded everything regardless. They were stacked but not <em>connected</em>.
+                    Every layer of the system had its own idea of relevance. Memory ranked by modification time, the wiki leaned on a hand-maintained routing table, and the rules just loaded everything regardless. Three mechanisms stacked on top of each other, but never actually <em>connected</em>.
                 </p>
                 <p class="text-slate-300 leading-relaxed">
-                    The question "what should Claude load for this task?" was answered by three independent systems that didn't talk to each other. The answer was always incomplete.
+                    So the real question was "what should Claude load for this task?" — and it got answered by three independent systems that never compared notes, so the answer they assembled between them came out incomplete every single time.
                 </p>
             </div>
         </div>
@@ -226,9 +226,9 @@
     <!-- The Graph -->
     <section id="graph" class="py-24 px-6 bg-slate-800/30">
         <div class="max-w-5xl mx-auto">
-            <h2 class="text-3xl md:text-4xl font-bold mb-4 fade-up stagger-1">Files Become Nodes. Concepts Become Edges.</h2>
+            <h2 class="text-3xl md:text-4xl font-bold mb-4 fade-up stagger-1">Files Become the Nodes, Concepts Become the Edges</h2>
             <p class="text-lg text-slate-300 leading-relaxed mb-12 fade-up stagger-2">
-                A knowledge graph connects the three systems into one traversable structure. Instead of "show me recent files," the session asks "what entities are relevant to this work, and which files discuss them?"
+                A knowledge graph ties those three systems into one structure you can actually traverse, so instead of asking "show me recent files," the session now asks "which entities matter to this work, and which files discuss them?"
             </p>
 
             <!-- Node Types -->
@@ -340,9 +340,9 @@
         <div class="max-w-5xl mx-auto">
             <h2 class="text-3xl md:text-4xl font-bold mb-4 fade-up stagger-1">5 for 5</h2>
             <p class="text-lg text-slate-300 leading-relaxed mb-4 fade-up stagger-2">
-                The gate was simple: test 5 real scenarios. If graph-based context beats the old mtime-based approach in 3 out of 5, proceed. It won all five.
+                The gate was simple. I ran graph-based context against the old mtime-based approach across 5 real scenarios, set the bar at 3 wins out of 5, and it cleared all five.
             </p>
-            <p class="text-slate-400 mb-12 fade-up stagger-2">Each scenario compares what the old system would surface vs. what the graph surfaces for the same session start.</p>
+            <p class="text-slate-400 mb-12 fade-up stagger-2">Each scenario lines up what the old system would have surfaced against what the graph surfaces, for the same session start.</p>
 
             <div class="space-y-6">
                 <!-- Scenario 1 -->
@@ -356,7 +356,7 @@
                             <div class="text-red-400 text-xs font-mono mb-2 uppercase tracking-wider">Mtime (old)</div>
                             <ul class="text-sm text-slate-400 space-y-1">
                                 <li>Whatever 3 files were edited most recently</li>
-                                <li>Usually: deployment notes, unrelated session log, NNAOV metrics</li>
+                                <li>Usually deployment notes, an unrelated session log, or NNAOV metrics</li>
                             </ul>
                         </div>
                         <div>
@@ -478,7 +478,7 @@
         <div class="max-w-5xl mx-auto">
             <h2 class="text-3xl md:text-4xl font-bold mb-4 fade-up stagger-1">Four Phases, All Shipped</h2>
             <p class="text-lg text-slate-300 leading-relaxed mb-12 fade-up stagger-2">
-                The entire system — graph construction, session integration, auto-indexing, and live tool enrichment — was built across two sessions. Local SQLite. No cloud infrastructure. No API calls. Just entity extraction and traversal.
+                Across two sessions I built the whole thing — graph construction, session integration, auto-indexing, and live tool enrichment. It all runs on local SQLite, with no cloud infrastructure, no API calls, and nothing underneath but entity extraction and traversal.
             </p>
 
             <div class="space-y-6">
@@ -489,7 +489,7 @@
                         <span class="text-emerald-400 font-mono text-xs bg-emerald-400/10 px-2 py-0.5 rounded">COMPLETE</span>
                     </div>
                     <p class="text-slate-300 leading-relaxed mb-4">
-                        Entity-extract every memory, wiki, and rules file. Seed 68 entities across 6 types (accounts, products, projects, systems, concepts). Parse the CLAUDE.md routing table into APPLIES_TO edges. Scan all files for entity mentions. Compute RELATES_TO relationships between files sharing 3+ non-stop-word entities.
+                        First I entity-extract every memory, wiki, and rules file, then seed 68 entities across 6 types — accounts, products, projects, systems, concepts. From there the CLAUDE.md routing table gets parsed into APPLIES_TO edges, every file is scanned for entity mentions, and RELATES_TO relationships are computed between any two files that share 3+ non-stop-word entities.
                     </p>
                     <div class="code-block p-4 text-sm">
                         <div class="text-slate-500"># Build the graph</div>
@@ -528,7 +528,7 @@
                         <span class="text-emerald-400 font-mono text-xs bg-emerald-400/10 px-2 py-0.5 rounded">COMPLETE</span>
                     </div>
                     <p class="text-slate-300 leading-relaxed mb-4">
-                        A PostToolUse hook fires on every Write or Edit to a memory, wiki, or rules file. It incrementally updates that file's node and re-scans for entity mentions — no full rebuild needed. The graph stays current as files change, files are created, or files are deleted.
+                        A PostToolUse hook fires on every Write or Edit to a memory, wiki, or rules file. It incrementally updates that file's node and re-scans it for entity mentions, so there's no full rebuild — and the graph stays current as files change, get created, or get deleted.
                     </p>
                     <div class="code-block p-4 text-sm">
                         <div class="text-slate-500"># Triggered automatically on every file write</div>
@@ -547,7 +547,7 @@
                         <span class="text-emerald-400 font-mono text-xs bg-emerald-400/10 px-2 py-0.5 rounded">COMPLETE</span>
                     </div>
                     <p class="text-slate-300 leading-relaxed mb-4">
-                        A second PostToolUse hook fires on every MCP tool call to the Salesforce server. It extracts entity signals from the tool input — account names, search queries, SOQL strings — queries the graph for matching entities, and surfaces related memory and wiki files alongside the tool results.
+                        A second PostToolUse hook fires on every MCP tool call to the Salesforce server. It pulls entity signals out of the tool input (account names, search queries, SOQL strings), queries the graph for matches, and surfaces the related memory and wiki files right alongside the tool results.
                     </p>
                     <div class="code-block p-4 text-sm">
                         <div class="text-slate-500"># Triggered on every Salesforce MCP tool call</div>
@@ -566,23 +566,23 @@
                 <div class="glass-card rounded-xl p-6 fade-up stagger-1">
                     <h4 class="font-semibold text-amber-400 mb-3">False Positive: "Exa" Matched "Example"</h4>
                     <p class="text-sm text-slate-400 mb-3">
-                        The entity "Exa" (a search API) was matching "example", "exactly", "examination" — appearing in 91 out of 308 files. 30% of the corpus.
+                        The entity "Exa" (a search API) was matching "example," "exactly," and "examination," so it turned up in 91 out of 308 files — close to a third of the whole corpus.
                     </p>
                     <div class="text-sm">
                         <span class="text-red-400 font-mono">Before:</span> <span class="text-slate-400">substring match</span><br>
                         <span class="text-emerald-400 font-mono">Fix:</span> <span class="text-slate-300">word-boundary regex for terms under 5 characters</span><br>
-                        <span class="text-slate-400">91 &rarr; 19 references</span>
+                        <span class="text-slate-400">91 references, down to 19</span>
                     </div>
                 </div>
                 <div class="glass-card rounded-xl p-6 fade-up stagger-2">
                     <h4 class="font-semibold text-amber-400 mb-3">Edge Explosion: 16,274 RELATES_TO</h4>
                     <p class="text-sm text-slate-400 mb-3">
-                        High-frequency entities (AIP in 44%, Agentforce in 42%, Slack in 35%) caused nearly every file to relate to every other file. The graph was fully connected — useless for ranking.
+                        A handful of high-frequency entities (AIP in 44% of files, Agentforce in 42%, Slack in 35%) made nearly every file relate to every other one, so the graph came out fully connected and useless for ranking.
                     </p>
                     <div class="text-sm">
                         <span class="text-red-400 font-mono">Before:</span> <span class="text-slate-400">16,274 edges, 2+ shared entities</span><br>
                         <span class="text-emerald-400 font-mono">Fix:</span> <span class="text-slate-300">IDF stop-word filter (>25%) + raise threshold to 3</span><br>
-                        <span class="text-slate-400">16,274 &rarr; 2,877 edges (82% reduction)</span>
+                        <span class="text-slate-400">16,274 edges, down to 2,877 (an 82% reduction)</span>
                     </div>
                 </div>
             </div>
@@ -594,7 +594,7 @@
         <div class="max-w-4xl mx-auto">
             <h2 class="text-3xl md:text-4xl font-bold mb-6 fade-up stagger-1">Under the Hood</h2>
             <p class="text-lg text-slate-300 leading-relaxed mb-12 fade-up stagger-2">
-                The entire system is local. No cloud database, no API calls, no network. SQLite running on your laptop with a TypeScript build script and Python hooks.
+                The entire system is local — SQLite running on your laptop, driven by a TypeScript build script and a handful of Python hooks, with no cloud database, no API calls, and no network anywhere in the loop.
             </p>
 
             <div class="glass-card rounded-xl p-8 fade-up stagger-2">
@@ -645,7 +645,7 @@
                     <div class="text-slate-300 pl-4">edges (id, source_id, target_id, edge_type, confidence, properties, created_at)</div>
                     <div class="text-slate-500 pl-4">-- UNIQUE(source_id, target_id, edge_type)</div>
                     <div class="text-slate-500 pl-4">-- FK with ON DELETE CASCADE</div>
-                    <div class="text-emerald-400 mt-3 text-xs">Two tables. Five indexes. That's the whole thing.</div>
+                    <div class="text-emerald-400 mt-3 text-xs">Two tables and five indexes &mdash; that's the whole thing.</div>
                 </div>
             </div>
         </div>
@@ -666,7 +666,7 @@
                         <h3 class="font-semibold">Graph-Enriched MCP Results</h3>
                     </div>
                     <p class="text-sm text-slate-400">
-                        When a CRM query returns data about an account, the graph now injects related context automatically. Query Starbucks? Claude sees prior analysis notes, relevant feedback, and wiki pages alongside the raw data. A PostToolUse hook extracts entity signals from tool input, queries the graph, and surfaces the top 5 related files in 55ms.
+                        When a CRM query returns data about an account, the graph now injects the related context automatically. Ask about Starbucks and Claude sees the prior analysis notes, the relevant feedback, and the wiki pages sitting right alongside the raw data — a PostToolUse hook extracts entity signals from the tool input, queries the graph, and surfaces the top 5 related files in 55ms.
                     </p>
                 </div>
                 <div class="glass-card rounded-xl p-6 fade-up stagger-3">
@@ -684,7 +684,7 @@
                         <h3 class="font-semibold">Task-Specific Rule Loading</h3>
                     </div>
                     <p class="text-sm text-slate-400">
-                        Instead of loading all 11 rules files every session, the graph could identify which rules apply to the current task. Hit a platform constraint: Claude Code auto-loads all rules before any hook runs. Revisiting if the platform adds conditional rule loading.
+                        Instead of loading all 11 rules files every session, the graph could work out which rules actually apply to the task at hand. The blocker is a platform one — Claude Code auto-loads every rule before any hook runs, so this waits until the platform supports conditional rule loading.
                     </p>
                 </div>
             </div>
@@ -701,26 +701,26 @@
                 <a href="https://jtehrani84.github.io/claude-context-architecture/" class="glass-card rounded-xl p-6 text-left hover:border-blue-400/30 transition-all duration-300 group fade-up stagger-1">
                     <div class="text-blue-400 font-mono text-xs mb-2">PART 1</div>
                     <h3 class="text-lg font-semibold mb-1 group-hover:text-blue-300 transition-colors">Teaching Claude to Remember</h3>
-                    <p class="text-sm text-slate-400">5-layer architecture: CLAUDE.md, wiki, memory, hooks, rules. The foundation.</p>
+                    <p class="text-sm text-slate-400">The 5-layer foundation &mdash; CLAUDE.md, wiki, memory, hooks, and rules.</p>
                 </a>
                 <a href="https://jtehrani84.github.io/context-engineering-agentscript/" class="glass-card rounded-xl p-6 text-left hover:border-blue-400/30 transition-all duration-300 group fade-up stagger-2">
                     <div class="text-blue-400 font-mono text-xs mb-2">PART 2</div>
                     <h3 class="text-lg font-semibold mb-1 group-hover:text-blue-300 transition-colors">From Wrong to Expert</h3>
-                    <p class="text-sm text-slate-400">What happens without context. Agent Script case study — confident and wrong.</p>
+                    <p class="text-sm text-slate-400">What happens without context, told through an Agent Script case study that was confident and wrong.</p>
                 </a>
                 <a href="https://jtehrani84.github.io/context-engineering-mcp/" class="glass-card rounded-xl p-6 text-left hover:border-blue-400/30 transition-all duration-300 group fade-up stagger-3">
                     <div class="text-blue-400 font-mono text-xs mb-2">PART 3</div>
                     <h3 class="text-lg font-semibold mb-1 group-hover:text-blue-300 transition-colors">Teaching Claude to Connect</h3>
-                    <p class="text-sm text-slate-400">MCP servers: 9 servers, 120+ tools. Org62 case study.</p>
+                    <p class="text-sm text-slate-400">Nine MCP servers, 120+ tools, and the Org62 case study.</p>
                 </a>
                 <div class="glass-card rounded-xl p-6 text-left border-violet-400/30 pulse-ring fade-up stagger-4">
                     <div class="text-violet-400 font-mono text-xs mb-2">PART 4 &mdash; YOU ARE HERE</div>
                     <h3 class="text-lg font-semibold mb-1 text-violet-300">Teaching Claude to Think in Graphs</h3>
-                    <p class="text-sm text-slate-400">Knowledge graph: 379 nodes, 5,120 edges. Entity-based context assembly.</p>
+                    <p class="text-sm text-slate-400">A knowledge graph of 379 nodes and 5,120 edges, doing entity-based context assembly.</p>
                 </div>
             </div>
 
-            <p class="text-slate-500 text-sm mt-8 fade-up stagger-5">Part 5 coming soon: Teaching Claude to Build (Skills &amp; Salesforce development automation)</p>
+            <p class="text-slate-500 text-sm mt-8 fade-up stagger-5">Part 5 coming soon &mdash; Teaching Claude to Build (Skills and Salesforce development automation)</p>
         </div>
     </section>
 
