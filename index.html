@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teaching Claude to Think in Graphs | Context Engineering Part 4</title>
+    <title>Teaching Claude to Think in Graphs — Context Engineering, Part 4</title>
     <meta name="description" content="Part 4 of the Context Engineering series. How a local knowledge graph replaces manual context routing with entity-based traversal — turning 200+ files into a connected, queryable structure.">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -142,13 +142,18 @@
     <!-- Navigation -->
     <nav class="fixed top-0 w-full z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-700/50">
         <div class="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
-            <span class="text-sm font-medium text-slate-400">Context Engineering <span class="text-violet-400">Part 4</span></span>
-            <div class="flex gap-6 text-sm">
-                <a href="#problem" class="text-slate-400 hover:text-white transition-colors">Problem</a>
-                <a href="#graph" class="text-slate-400 hover:text-white transition-colors">Graph</a>
-                <a href="#validation" class="text-slate-400 hover:text-white transition-colors">Validation</a>
-                <a href="#architecture" class="text-slate-400 hover:text-white transition-colors">Architecture</a>
-                <a href="#series" class="text-slate-400 hover:text-white transition-colors">Series</a>
+            <span class="text-sm font-mono text-slate-500">context-engineering <span class="text-violet-400">//</span> part-4</span>
+            <div class="flex items-center gap-3 sm:gap-4 text-xs font-mono text-slate-500">
+                <a href="https://jtehrani84.github.io/claude-context-architecture/" class="hover:text-slate-200 transition hidden sm:inline">1</a>
+                <a href="https://jtehrani84.github.io/context-engineering-agentscript/" class="hover:text-slate-200 transition hidden sm:inline">2</a>
+                <a href="https://jtehrani84.github.io/context-engineering-mcp/" class="hover:text-slate-200 transition hidden sm:inline">3</a>
+                <span class="text-violet-400 font-semibold">4</span>
+                <a href="https://jtehrani84.github.io/context-engineering-skills/" class="hover:text-slate-200 transition hidden sm:inline">5</a>
+                <a href="https://jtehrani84.github.io/claude-context-architecture/from-memory-to-operating-system.html" class="hover:text-slate-200 transition hidden sm:inline">6</a>
+                <a href="https://jtehrani84.github.io/context-engineering-part-7/" class="hover:text-slate-200 transition">7</a>
+                <a href="https://jtehrani84.github.io/context-engineering-part-8/" class="hover:text-slate-200 transition">8</a>
+                <a href="https://jtehrani84.github.io/context-engineering-part-9/" class="hover:text-slate-200 transition">9</a>
+                <a href="https://jtehrani84.github.io/context-engineering-part-10/" class="hover:text-slate-200 transition">10</a>
             </div>
         </div>
     </nav>
@@ -156,7 +161,7 @@
     <!-- Hero Section -->
     <section class="hero-gradient min-h-[85vh] flex items-center relative overflow-hidden">
         <div class="max-w-6xl mx-auto px-6 w-full py-32">
-            <p class="text-violet-400 font-mono text-sm mb-4 fade-up">CONTEXT ENGINEERING SERIES &mdash; PART 4 OF 5</p>
+            <p class="text-violet-400 font-mono text-xs md:text-sm uppercase tracking-[0.18em] mb-4 fade-up">Context Engineering Series &middot; Part 4</p>
             <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-8 fade-up stagger-1">
                 Teaching Claude to<br>
                 <span class="gradient-text">Think in Graphs</span>
@@ -190,7 +195,7 @@
         <div class="max-w-4xl mx-auto">
             <h2 class="text-3xl md:text-4xl font-bold mb-6 fade-up stagger-1">The Memory System Hit a Wall</h2>
             <p class="text-lg text-slate-300 leading-relaxed mb-8 fade-up stagger-2">
-                The 5-layer architecture from Part 1 worked — Claude remembered across sessions, loaded wiki pages on demand, and applied rules consistently. But after 6 months of daily use, it ran into a scaling problem the original design was never built to handle.
+                The 5-layer architecture from Part 1 worked... Claude remembered across sessions, loaded wiki pages on demand, and applied rules consistently. But after six months of daily use it ran into a scaling problem the original design was never built to handle, and honestly I didn't see it coming until the context started feeling noisy.
             </p>
 
             <div class="grid md:grid-cols-3 gap-6 mb-12">
@@ -217,7 +222,7 @@
                     Every layer of the system had its own idea of relevance. Memory ranked by modification time, the wiki leaned on a hand-maintained routing table, and the rules just loaded everything regardless. Three mechanisms stacked on top of each other, but never actually <em>connected</em>.
                 </p>
                 <p class="text-slate-300 leading-relaxed">
-                    So the real question was "what should Claude load for this task?" — and it got answered by three independent systems that never compared notes, so the answer they assembled between them came out incomplete every single time.
+                    So the real question was always "what should Claude load for this task?", and it kept getting answered by three independent systems that never compared notes, which meant the answer they assembled between them came out incomplete just about every time.
                 </p>
             </div>
         </div>
@@ -478,7 +483,7 @@
         <div class="max-w-5xl mx-auto">
             <h2 class="text-3xl md:text-4xl font-bold mb-4 fade-up stagger-1">Four Phases, All Shipped</h2>
             <p class="text-lg text-slate-300 leading-relaxed mb-12 fade-up stagger-2">
-                Across two sessions I built the whole thing — graph construction, session integration, auto-indexing, and live tool enrichment. It all runs on local SQLite, with no cloud infrastructure, no API calls, and nothing underneath but entity extraction and traversal.
+                Across two sessions I built the whole thing... graph construction, session integration, auto-indexing, and live tool enrichment. It all runs on local SQLite, with no cloud infrastructure, no API calls, and nothing underneath but entity extraction and traversal, which is the part I like most about it.
             </p>
 
             <div class="space-y-6">
@@ -561,7 +566,7 @@
             </div>
 
             <!-- Quality Engineering -->
-            <h3 class="text-2xl font-bold mt-16 mb-6 fade-up">Two Quality Problems, Two Fixes</h3>
+            <h3 class="text-2xl font-bold mt-16 mb-6 fade-up">Where the First Build Went Wrong</h3>
             <div class="grid md:grid-cols-2 gap-6">
                 <div class="glass-card rounded-xl p-6 fade-up stagger-1">
                     <h4 class="font-semibold text-amber-400 mb-3">False Positive: "Exa" Matched "Example"</h4>
@@ -594,7 +599,7 @@
         <div class="max-w-4xl mx-auto">
             <h2 class="text-3xl md:text-4xl font-bold mb-6 fade-up stagger-1">Under the Hood</h2>
             <p class="text-lg text-slate-300 leading-relaxed mb-12 fade-up stagger-2">
-                The entire system is local — SQLite running on your laptop, driven by a TypeScript build script and a handful of Python hooks, with no cloud database, no API calls, and no network anywhere in the loop.
+                The entire system is local... SQLite running on your laptop, driven by a TypeScript build script and a handful of Python hooks, with no cloud database, no API calls, and no network anywhere in the loop.
             </p>
 
             <div class="glass-card rounded-xl p-8 fade-up stagger-2">
@@ -656,7 +661,7 @@
         <div class="max-w-4xl mx-auto">
             <h2 class="text-3xl md:text-4xl font-bold mb-6 fade-up stagger-1">What's Built & What's Next</h2>
             <p class="text-lg text-slate-300 leading-relaxed mb-8 fade-up stagger-2">
-                The graph now powers both session startup and live tool enrichment. Two extensions remain on the roadmap.
+                The graph now powers both session startup and live tool enrichment, and there are still two extensions I want to get to when the platform lets me.
             </p>
 
             <div class="space-y-4">
@@ -695,7 +700,7 @@
     <section id="series" class="py-24 px-6">
         <div class="max-w-4xl mx-auto text-center">
             <h2 class="text-3xl md:text-4xl font-bold mb-4 fade-up stagger-1">The Context Engineering Series</h2>
-            <p class="text-lg text-slate-400 mb-12 fade-up stagger-2">Five parts, each building on the last. Start anywhere, but Part 1 is the foundation.</p>
+            <p class="text-lg text-slate-400 mb-12 fade-up stagger-2">Ten parts, each building on the last. Start anywhere, but Part 1 is the foundation.</p>
 
             <div class="grid md:grid-cols-2 gap-4">
                 <a href="https://jtehrani84.github.io/claude-context-architecture/" class="glass-card rounded-xl p-6 text-left hover:border-blue-400/30 transition-all duration-300 group fade-up stagger-1">
@@ -718,21 +723,45 @@
                     <h3 class="text-lg font-semibold mb-1 text-violet-300">Teaching Claude to Think in Graphs</h3>
                     <p class="text-sm text-slate-400">A knowledge graph of 379 nodes and 5,120 edges, doing entity-based context assembly.</p>
                 </div>
+                <a href="https://jtehrani84.github.io/context-engineering-skills/" class="glass-card rounded-xl p-6 text-left hover:border-blue-400/30 transition-all duration-300 group fade-up stagger-1">
+                    <div class="text-blue-400 font-mono text-xs mb-2">PART 5</div>
+                    <h3 class="text-lg font-semibold mb-1 group-hover:text-blue-300 transition-colors">Teaching Claude to Build</h3>
+                    <p class="text-sm text-slate-400">Skills and Salesforce development automation.</p>
+                </a>
+                <a href="https://jtehrani84.github.io/claude-context-architecture/from-memory-to-operating-system.html" class="glass-card rounded-xl p-6 text-left hover:border-blue-400/30 transition-all duration-300 group fade-up stagger-2">
+                    <div class="text-blue-400 font-mono text-xs mb-2">PART 6</div>
+                    <h3 class="text-lg font-semibold mb-1 group-hover:text-blue-300 transition-colors">From Memory to Operating System</h3>
+                    <p class="text-sm text-slate-400">The context layers stop being storage and start behaving like an operating system.</p>
+                </a>
+                <a href="https://jtehrani84.github.io/context-engineering-part-7/" class="glass-card rounded-xl p-6 text-left hover:border-blue-400/30 transition-all duration-300 group fade-up stagger-3">
+                    <div class="text-blue-400 font-mono text-xs mb-2">PART 7</div>
+                    <h3 class="text-lg font-semibold mb-1 group-hover:text-blue-300 transition-colors">From Operating System to Evolving Harness</h3>
+                    <p class="text-sm text-slate-400">The system starts changing itself, and what it takes to keep that safe.</p>
+                </a>
+                <a href="https://jtehrani84.github.io/context-engineering-part-8/" class="glass-card rounded-xl p-6 text-left hover:border-blue-400/30 transition-all duration-300 group fade-up stagger-4">
+                    <div class="text-blue-400 font-mono text-xs mb-2">PART 8</div>
+                    <h3 class="text-lg font-semibold mb-1 group-hover:text-blue-300 transition-colors">From Evolving Harness to Frontier Harness</h3>
+                    <p class="text-sm text-slate-400">Making the harness safe and portable across frontier labs.</p>
+                </a>
+                <a href="https://jtehrani84.github.io/context-engineering-part-9/" class="glass-card rounded-xl p-6 text-left hover:border-blue-400/30 transition-all duration-300 group fade-up stagger-5">
+                    <div class="text-blue-400 font-mono text-xs mb-2">PART 9</div>
+                    <h3 class="text-lg font-semibold mb-1 group-hover:text-blue-300 transition-colors">The Harness That Improves Itself</h3>
+                    <p class="text-sm text-slate-400">Closing the self-improvement loop behind a gate it can't grade for itself.</p>
+                </a>
+                <a href="https://jtehrani84.github.io/context-engineering-part-10/" class="glass-card rounded-xl p-6 text-left hover:border-blue-400/30 transition-all duration-300 group fade-up stagger-6">
+                    <div class="text-blue-400 font-mono text-xs mb-2">PART 10</div>
+                    <h3 class="text-lg font-semibold mb-1 group-hover:text-blue-300 transition-colors">Salesforce Is the Harness</h3>
+                    <p class="text-sm text-slate-400">Where the whole series lands &mdash; the thesis, stated plainly.</p>
+                </a>
             </div>
-
-            <p class="text-slate-500 text-sm mt-8 fade-up stagger-5">Part 5 coming soon &mdash; Teaching Claude to Build (Skills and Salesforce development automation)</p>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer class="py-12 px-6 border-t border-slate-800">
-        <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="text-sm text-slate-500">
-                John Tehrani &middot; Principal, Strategic SE &middot; Salesforce
-            </div>
-            <div class="text-sm text-slate-600">
-                Built with Claude Code. Obviously.
-            </div>
+    <footer class="border-t border-slate-800 mt-10">
+        <div class="max-w-4xl mx-auto px-6 py-12 text-slate-500 text-sm font-mono flex flex-col md:flex-row justify-between items-center gap-4">
+            <span>Context Engineering Series &middot; Part 4 &middot; John Tehrani</span>
+            <span>Context, routed by the graph.</span>
         </div>
     </footer>
 
